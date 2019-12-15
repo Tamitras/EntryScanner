@@ -30,6 +30,7 @@ _ReSharper*/
 .vs/
 #Nuget packages folder
 packages/
+resources/*
 
 # Compiled source #
 ###################
