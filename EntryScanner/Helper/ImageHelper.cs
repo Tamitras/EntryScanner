@@ -28,13 +28,16 @@ namespace EntryScanner.Helper
         {
             Rectangle cropRect = rect;
             Bitmap src = image as Bitmap;
-            Bitmap target = new Bitmap(cropRect.Width, cropRect.Height);
+            Bitmap target = new Bitmap(cropRect.Width+200, cropRect.Height+20);
 
             using (Graphics g = Graphics.FromImage(target))
             {
-                g.DrawImage(src, new Rectangle(0, 0, target.Width, target.Height),
-                                 cropRect,
-                                 GraphicsUnit.Pixel);
+                g.DrawImage(
+                    src,
+                    new Rectangle(0, 0, target.Width, target.Height),
+                    cropRect,
+                    GraphicsUnit.Pixel
+                    );
             }
 
             return target;
@@ -54,13 +57,27 @@ namespace EntryScanner.Helper
                 }
 
                 //TODO: Exception wrong input
-                // Könnte sein, dass das zu suchende Template größer ist als die Quell-Datei (Croped Image)
-                //foreach (var foundFace in foundFaces)
-                //{
-                //    Image<Bgr, byte> source = new Image<Bgr, byte>(foundFace);
-                //    Image<Bgr, byte> template = new Image<Bgr, byte>(Properties.Resources.Marina_Face); // Image A
-                //    var foundTemplate = FindTemplate(template, source);
-                //}
+                //Könnte sein, dass das zu suchende Template größer ist als die Quell - Datei(Croped Image)
+
+                foreach (var foundFace in foundFaces)
+                {
+                    if (foundFace.Height > Properties.Resources.Template_Harvey.Height)
+                    {
+                        Console.WriteLine("Gefundenes Bild ist größer als das Template");
+                    }
+                    else
+                    {
+                        Image<Bgr, byte> source = new Image<Bgr, byte>(foundFace);
+                        Image<Bgr, byte> template = new Image<Bgr, byte>(Properties.Resources.Template_Harvey); // Image A
+                        //var foundTemplate = FindTemplate(template, source);
+                        var foundTemplate = FindTemplate(source,template);
+                        if(foundTemplate)
+                        {
+                            Console.WriteLine("Harvey gefunden");
+                        }
+                        
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -84,7 +101,6 @@ namespace EntryScanner.Helper
                 if (maxValues[0] > 0.77)
                 {
                     // This is a match. Do something with it, for example draw a rectangle around it.
-
                     ret = true;
                 }
                 else
@@ -95,7 +111,5 @@ namespace EntryScanner.Helper
 
             return ret;
         }
-
-
     }
 }

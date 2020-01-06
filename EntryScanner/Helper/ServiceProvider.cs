@@ -22,6 +22,8 @@ namespace EntryScanner
 
         private const string CamUrl = "http://192.168.0.20/image/jpeg.cgi";
 
+        public static double ScaleFactor = 1.4;
+
         public static Bitmap CurrentImage { get; set; }
         public static ImageHelper ImageHelper { get; set; }
 
@@ -35,7 +37,7 @@ namespace EntryScanner
 
         private static void ImageHelper_TemplateFound(object sender, MyEventArgs e)
         {
-            TemplateFound(sender, new MyEventArgs() {imageAsBitmap = e.imageAsBitmap });
+            TemplateFound(sender, new MyEventArgs() { imageAsBitmap = e.imageAsBitmap });
         }
 
         public static Bitmap GetScreenshot()
@@ -65,8 +67,12 @@ namespace EntryScanner
         internal static Image FindFaces(Bitmap imageAsBitmap, out List<Bitmap> images)
         {
             Bitmap bitmap = imageAsBitmap;
+            Bitmap bitmapCloned = (Bitmap)bitmap.Clone();
             Image<Bgr, byte> grayImage = new Image<Bgr, byte>(bitmap);
-            Rectangle[] rectangles = cascadeClassifier.DetectMultiScale(grayImage, 1.4, 0);
+
+            // 1.4 is the best ScaleFactor
+            //Rectangle[] rectangles = cascadeClassifier.DetectMultiScale(grayImage, 1.4, 0);
+            Rectangle[] rectangles = cascadeClassifier.DetectMultiScale(grayImage, ServiceProvider.ScaleFactor, 0);
 
             foreach (var rectangle in rectangles)
             {
@@ -82,23 +88,28 @@ namespace EntryScanner
             // Crop Image from Rectangle and search Database for equal
             // CroptImage(Rectangles) --> Inform MainThrad and Form that someone is found
 
-            images = ImageHelper.StartAnalyseScreenshotAsync(imageAsBitmap, rectangles);
+            images = ImageHelper.StartAnalyseScreenshotAsync(bitmapCloned, rectangles);
 
             return bitmap;
         }
 
         internal static void GetInitialImage()
         {
-            while (true)
-            {
-                using (WebClient client = new WebClient())
-                {
-                    client.DownloadDataCompleted += Client_DownloadDataCompleted;
-                    //byte[] bytes = client.DownloadData(new Uri(CamUrl));
-                    client.DownloadDataAsync(new Uri(CamUrl));
-                }
-                Thread.Sleep(100);
-            }
+            //Load From URL
+            //while (true)
+            //{
+            //    using (WebClient client = new WebClient())
+            //    {
+            //        client.DownloadDataCompleted += Client_DownloadDataCompleted;
+            //        //byte[] bytes = client.DownloadData(new Uri(CamUrl));
+            //        client.DownloadDataAsync(new Uri(CamUrl));
+            //    }
+            //    Thread.Sleep(100);
+            //}
+
+            CurrentImage = new Bitmap(Properties.Resources.suits_persons);
+
+            NewCurrentImage(null, new MyEventArgs() { imageAsBitmap = CurrentImage });
         }
 
         private static void Client_DownloadDataCompleted(object sender, DownloadDataCompletedEventArgs e)

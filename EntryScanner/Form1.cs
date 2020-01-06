@@ -13,7 +13,6 @@ namespace EntryScanner
 {
     public partial class Form1 : Form
     {
-
         private Thread GetImageThread { get; set; }
         private Thread SetImageThread { get; set; }
         public Form1()
@@ -69,12 +68,14 @@ namespace EntryScanner
             Bitmap clonedBitmap = (Bitmap)ServiceProvider.CurrentImage.Clone();
 
             this.pictureBoxFound.Image = ServiceProvider.FindFaces(clonedBitmap, out List<Bitmap> images);
+            this.panelFoundFaces.Controls.Clear();
 
             foreach (var image in images)
             {
                 PictureBox picBox = new PictureBox();
                 picBox.Image = (Image)image;
-                picBox.Size = new Size(100, 100);
+                picBox.Size = new Size(120, 120);
+                picBox.SizeMode = PictureBoxSizeMode.StretchImage;
 
                 InvokeIfRequired(this, (MethodInvoker)delegate ()
                 {
@@ -103,6 +104,13 @@ namespace EntryScanner
                 // Die Änderung an der UI kann direkt aufgerufen werden.
                 methodToInvoke.DynamicInvoke();
             }
+        }
+
+        private void TrackBar1_ValueChanged(object sender, EventArgs e)
+        {
+            ServiceProvider.ScaleFactor = trackBar1.Value / 10.0;
+            this.labelScaleFactor.Text = trackBar1.Value.ToString();
+            this.GetImage();
         }
     }
 }
