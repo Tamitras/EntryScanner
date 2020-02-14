@@ -21,14 +21,14 @@ namespace EntryScanner.Helper
         /// </summary>
         public List<Bitmap> StartAnalyseScreenshotAsync(Image image, Rectangle[] rectangles)
         {
-            return AnalyseScreenshot(image, rectangles);
+            return AnalyzeImageAndGetFoundFaces(image, rectangles);
         }
 
         private Bitmap CropImage(Image image, Rectangle rect)
         {
             Rectangle cropRect = rect;
             Bitmap src = image as Bitmap;
-            Bitmap target = new Bitmap(cropRect.Width+200, cropRect.Height+20);
+            Bitmap target = new Bitmap(cropRect.Width, cropRect.Height);
 
             using (Graphics g = Graphics.FromImage(target))
             {
@@ -46,7 +46,7 @@ namespace EntryScanner.Helper
         /// <summary>
         /// Analysiert den aktuellen Screenshot und vergleicht diesen mit einem template
         /// </summary>
-        private List<Bitmap> AnalyseScreenshot(Image image, Rectangle[] rectangles)
+        private List<Bitmap> AnalyzeImageAndGetFoundFaces(Image image, Rectangle[] rectangles)
         {
             var foundFaces = new List<Bitmap>();
             try
@@ -56,28 +56,29 @@ namespace EntryScanner.Helper
                     foundFaces.Add(CropImage(image, rect));
                 }
 
-                //TODO: Exception wrong input
-                //Könnte sein, dass das zu suchende Template größer ist als die Quell - Datei(Croped Image)
+                ////TODO: Exception wrong input
+                ////Könnte sein, dass das zu suchende Template größer ist als die Quell - Datei(Croped Image)
 
-                foreach (var foundFace in foundFaces)
-                {
-                    if (foundFace.Height > Properties.Resources.Template_Harvey.Height)
-                    {
-                        Console.WriteLine("Gefundenes Bild ist größer als das Template");
-                    }
-                    else
-                    {
-                        Image<Bgr, byte> source = new Image<Bgr, byte>(foundFace);
-                        Image<Bgr, byte> template = new Image<Bgr, byte>(Properties.Resources.Template_Harvey); // Image A
-                        //var foundTemplate = FindTemplate(template, source);
-                        var foundTemplate = FindTemplate(source,template);
-                        if(foundTemplate)
-                        {
-                            Console.WriteLine("Harvey gefunden");
-                        }
-                        
-                    }
-                }
+                //foreach (var foundFace in foundFaces)
+                //{
+                //    if (foundFace.Height > 1)
+                //    {
+                //        Console.WriteLine("Gefundenes Bild ist größer als das Template");
+                //    }
+                //    else
+                //    {
+                //        Image<Bgr, byte> source = new Image<Bgr, byte>(foundFace);
+                //        Image<Bgr, byte> template = new Image<Bgr, byte>(foundFace); // Image A
+                //        //var foundTemplate = FindTemplate(template, source);
+                //        var foundTemplate = FindTemplate(source,template);
+                //        if(foundTemplate)
+                //        {
+                //            Console.WriteLine("Harvey gefunden");
+                //        }
+
+                //    }
+                //}
+
             }
             catch (Exception ex)
             {
@@ -87,7 +88,36 @@ namespace EntryScanner.Helper
             return foundFaces;
         }
 
-        private bool FindTemplate(Image<Bgr, byte> template, Image<Bgr, byte> source)
+        public bool IsEqual(Image<Bgr, byte> template, Image<Bgr, byte> source)
+        {
+            // 88% gleich
+            double maxCoeff = 0.88;
+            Boolean ret = false;
+            // You can try different values of the threshold. I guess somewhere between 0.75 and 0.95 would be good.
+            if (CurrentCoeff > GetAccordanceCoeff(template, source))
+            {
+                // This is a match. Do something with it, for example draw a rectangle around it.
+                ret = true;
+            }
+            else
+            {
+                ret = false;
+            }
+            return ret;
+        }
+
+        public double GetAccordanceCoeff(Image<Bgr, byte> template, Image<Bgr, byte> source)
+        {
+            using (Image<Gray, float> result = source.MatchTemplate(template, Emgu.CV.CvEnum.TemplateMatchingType.CcoeffNormed))
+            {
+                double[] minValues, maxValues;
+                Point[] minLocations, maxLocations;
+                result.MinMax(out minValues, out maxValues, out minLocations, out maxLocations);
+                return maxValues[0];
+            }
+        }
+
+        public bool FindTemplate(Image<Bgr, byte> template, Image<Bgr, byte> source)
         {
             Boolean ret = false;
             using (Image<Gray, float> result = source.MatchTemplate(template, Emgu.CV.CvEnum.TemplateMatchingType.CcoeffNormed))

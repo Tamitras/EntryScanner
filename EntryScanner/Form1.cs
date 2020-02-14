@@ -14,7 +14,6 @@ namespace EntryScanner
     public partial class Form1 : Form
     {
         private Thread GetImageThread { get; set; }
-        private Thread SetImageThread { get; set; }
         public Form1()
         {
             InitializeComponent();
@@ -24,52 +23,88 @@ namespace EntryScanner
         public void Initialize()
         {
             GetImageThread = new Thread(GetImage);
-            ServiceProvider.Initialize();
-            ServiceProvider.NewCurrentImage += ServiceProvider_NewCurrentImage;
-            ServiceProvider.TemplateFound += ServiceProvider_TemplateFound;
+            CamProvider.Initialize();
+            CamProvider.NewCapturedImageFromCam += ServiceProvider_NewCurrentImage;
+            CamProvider.TemplateFound += CamProvider_TemplateFound;
         }
 
-        private void ServiceProvider_TemplateFound(object sender, MyEventArgs e)
+        private void CamProvider_TemplateFound(object sender, MyEventArgs e)
         {
-            FoundPerson(e.imageAsBitmap);
+            RefreshPersons(e.imageAsBitmap);
         }
 
-        private void FoundPerson(Bitmap imageAsBitmap)
+        private void RefreshPersons(Bitmap imageAsBitmap)
         {
-            InvokeIfRequired(this, (MethodInvoker)delegate ()
+            try
             {
-                PictureBox picBox = new PictureBox();
-                picBox.Image = (Image)imageAsBitmap;
+                InvokeIfRequired(this, (MethodInvoker)delegate ()
+                {
+                    this.panelFoundPersons.Controls.Clear();
+                    foreach (var person in CamProvider.Persons)
+                    {
+                        PictureBox picBox = new PictureBox();
 
-                this.panelFoundPersons.Controls.Add(picBox);
-            });
+                        // Get first Face
+                        var face = person.Faces.FirstOrDefault();
+                        if (face != null)
+                        {
+                            picBox.Image = (Image)face;
+                            picBox.Size = new Size(120, 120);
+                            picBox.SizeMode = PictureBoxSizeMode.StretchImage;
+
+                            this.panelFoundPersons.Controls.Add(picBox);
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
         }
 
         private void ServiceProvider_NewCurrentImage(object sender, MyEventArgs e)
         {
-            SetImage(e.imageAsBitmap);
+            // Zeigt immer das neuste Bild der Webcam an
+            ShowWebCamImage(e.imageAsBitmap);
+            ShowFoundFaces();
+
         }
 
         private void BntGetImage_Click(object sender, EventArgs e)
         {
-            GetImageThread.Start();
+            if (GetImageThread.IsAlive)
+            {
+
+            }
+            else
+            {
+                GetImageThread.Start();
+            }
         }
 
         private void GetImage()
         {
-            ServiceProvider.GetInitialImage();
+            CamProvider.AnalyzeCamStream();
         }
 
-        private void SetImage(Bitmap imageAsBitmap)
+        private void ShowWebCamImage(Bitmap imageAsBitmap)
         {
             this.pictureBoxOrginal.Image = imageAsBitmap;
             this.pictureBoxFound.Image = imageAsBitmap;
+        }
 
-            Bitmap clonedBitmap = (Bitmap)ServiceProvider.CurrentImage.Clone();
+        private void ShowFoundFaces()
+        {
+            Bitmap clonedBitmap = (Bitmap)CamProvider.CurrentImage.Clone();
 
-            this.pictureBoxFound.Image = ServiceProvider.FindFaces(clonedBitmap, out List<Bitmap> images);
-            this.panelFoundFaces.Controls.Clear();
+            this.pictureBoxFound.Image = CamProvider.FindFaces(clonedBitmap, out List<Bitmap> images);
 
+            ShowFoundFaces(images);
+        }
+
+        private void ShowFoundFaces(List<Bitmap> images)
+        {
             foreach (var image in images)
             {
                 PictureBox picBox = new PictureBox();
@@ -89,11 +124,14 @@ namespace EntryScanner
             }
         }
 
+        /// <summary>
+        /// Mit Hilfe von InvokeRequired wird geprüft ob der Aufruf direkt an die UI gehen kann oder
+        /// ob ein Invokeing hier von Nöten ist
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="methodToInvoke"></param>
         private void InvokeIfRequired(Control target, Delegate methodToInvoke)
         {
-            /* Mit Hilfe von InvokeRequired wird geprüft ob der Aufruf direkt an die UI gehen kann oder
-             * ob ein Invokeing hier von Nöten ist
-             */
             if (target.InvokeRequired)
             {
                 // Das Control muss per Invoke geändert werden, weil der aufruf aus einem Backgroundthread kommt
@@ -104,13 +142,6 @@ namespace EntryScanner
                 // Die Änderung an der UI kann direkt aufgerufen werden.
                 methodToInvoke.DynamicInvoke();
             }
-        }
-
-        private void TrackBar1_ValueChanged(object sender, EventArgs e)
-        {
-            ServiceProvider.ScaleFactor = trackBar1.Value / 10.0;
-            this.labelScaleFactor.Text = trackBar1.Value.ToString();
-            this.GetImage();
         }
     }
 }
