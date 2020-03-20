@@ -20,7 +20,7 @@ namespace EntryScanner
     {
         private static readonly CascadeClassifier cascadeClassifier = new CascadeClassifier(@"Cascades\haarcascade_frontalface_alt_tree.xml");
 
-        private const string CamRTSPUrl = "rtsp://admin:123456@192.168.0.26:554/live/ch0";
+        private const string CamRTSPUrl = "rtsp://admin:123456@192.168.0.151:554/live/ch0";
 
         public static Bitmap CurrentImage { get; set; }
         public static ImageHelper ImageHelper { get; set; }
